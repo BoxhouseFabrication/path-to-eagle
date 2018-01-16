@@ -42,7 +42,6 @@
                 if ($_POST['advType'] === 'rank' && !isset($_POST['targetRank']) || empty($_POST['targetRank'])) {
                     throw new Exception('Target Rank not specified');
                 }
-
                 if (!isset($_POST['target_date']) || empty($_POST['target_date'])) {
                     throw new Exception('Target Date not specified');//get the b-day and go to the 18th b-day as default?
                 }
@@ -150,10 +149,56 @@
         </form>
 
         <?php if ($show_results): ?>
+            <?php 
+                //define('PLANNING_METHOD', 'pessimistic');
+                //define('PLANNING_METHOD', 'optimistic');
+                define('PLANNING_METHOD', 'weighted');
+                
+                if("pessimistic" === PLANNING_METHOD) {
+                    //figure out the last day that a rank can be completed...in reverse order.
+                    //flip the rank array
+                    //foreach rank subtract # of days from the target date/last rank date
+                    $ranksToBeCompleted = array_reverse($ranksToBeCompleted);
+                    $targetDate = fv('target_date');
+
+                    foreach ($ranksToBeCompleted as $rank) {
+                        $rank->targetDate = $targetDate;
+                        $targetDate = date('Y-m-d', strtotime("-{$rank->requiredDays} day", strtotime($targetDate)));
+                    }
+
+                    $ranksToBeCompleted = array_reverse($ranksToBeCompleted);
+                } else if("optimistic" === PLANNING_METHOD) {
+                    $startDate = fv('start_date');
+                    foreach ($ranksToBeCompleted as $rank) {
+                        $startDate = date('Y-m-d', strtotime("+{$rank->requiredDays} day", strtotime($startDate)));
+                        $rank->targetDate = $startDate;
+                    }
+                } else if ("weighted" === PLANNING_METHOD) {
+                    $totalDaysRequired = 0;
+                    foreach ($ranksToBeCompleted as $rank) {
+                        $totalDaysRequired += $rank->requiredDays;
+                    }
+                    
+                    $dateRangeStart= new DateTime(fv('start_date'));
+                    $dateRangeEnd = new DateTime(fv('target_date'));
+                    $dateDiff = $dateRangeEnd->diff($dateRangeStart);
+                    $totalDaysAvailable = $dateDiff->days;
+                    
+                    $startDate = fv('start_date');
+                    foreach ($ranksToBeCompleted as $rank) {
+                        $startDate = date('Y-m-d', strtotime("+{$rank->requiredDays} day", strtotime($startDate)));
+                        $rank->targetDate = $startDate;
+                    }
+                }
+            ?>
         <div id="plannedPath">
             <?php foreach ($ranksToBeCompleted as $rank) : ?>
             <div class="path_rank">
-                <span class="rank"><?= $rank->name ?></span>
+                <span class="rank"><?= $rank->name ?></span> - <span class="targetDate">Complete By: <?= date('m/d/Y', strtotime($rank->targetDate)) ?><br>
+                    <?= $rank->requiredDays ?> / <?= $totalDaysRequired ?> = <?= $rank->requiredDays/$totalDaysRequired ?>
+                    <?php if (isset($totalDaysAvailable)) : ?><br>
+                        <?= $totalDaysAvailable * ($rank->requiredDays/$totalDaysRequired) ?>
+                    <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>

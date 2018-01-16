@@ -17,12 +17,13 @@ class rank {
 	public $name;
 	public $progressOrder;
         public $requiredDays;
+        public $targetDate;
 	
 	function __construct($slug, $name, $progressOrder, $requiredDays) {
-		$this->slug = $slug;
-		$this->name = $name;
-		$this->progressOrder = $progressOrder;
-                $this->requiredDays = $requiredDays;
+            $this->slug = $slug;
+            $this->name = $name;
+            $this->progressOrder = $progressOrder;
+            $this->requiredDays = $requiredDays;
 	}
 	
 	public static function getRanks() {

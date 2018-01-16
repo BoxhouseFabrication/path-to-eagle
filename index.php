@@ -1,139 +1,178 @@
 <html>
-	<?php
-		include 'utilities.php';
-		include 'merit_badge.php';
-		include 'rank.php';
+    <?php
+        include 'utilities.php';
+        include 'merit_badge.php';
+        include 'rank.php';
 
-		$allMBs = merit_badge::getMeritBadges();
-		$eagleRequired = merit_badge::getEagleMeritBadges();
-		$allRanks = rank::getRanks();
-		$palmLimit = floor((count($allMBs)-count($eagleRequired))/5);
-		
-		$errorMsg = null;
-		/*
-		//IMPORT CURRENT ADVANCEMENT
+        $allMBs = merit_badge::getMeritBadges();
+        $eagleRequired = merit_badge::getEagleMeritBadges();
+        $allRanks = rank::getRanks();
+        $palmLimit = floor((count($allMBs)-count($eagleRequired))/5);
 
-		//SET TARGET ADVANCEMENT / TARGET DATE
+        $errorMsg = null;
+        /*
+        //IMPORT CURRENT ADVANCEMENT
 
-		//SELECT MERIT BADGES
+        //SET TARGET ADVANCEMENT / TARGET DATE
 
-		//SUBMIT
+        //SELECT MERIT BADGES
 
-		//RECEIVE PLAN PROJECTION
-		1. List steps to be completed
-		2. List date for last possible completion for each step
-		3. List average days per requirement to be completed in order to match
+        //SUBMIT
 
-		----------------------
-		BACK END
-		1. Determine starting rank.
-		2. Determine completion rank.
-		3. Gather list of all required steps between start and completion rank.
-		4. Check off all requirements which have been completed.
-		5. Determine all concurrent progression steps
-		6. Divide remaining requirements amongst total time
-		 */
-		 
-		if ("POST" === $_SERVER['REQUEST_METHOD']) {
-			try {
-				if (!isset($_POST['targetRank']) || empty($_POST['targetRank'])) {
-					throw new Exception('Target Rank not specified');
-				}
-				
-				$startingRank = 0;
-				$targetRank = $_POST['targetRank'];
-				
-				$daysBetweenRanks = rank::getRankDays($startingRank, $targetRank);
-				
-				define('SHOW_RESULTS', true);//this should be the last thing that happens
-			} catch (Exception $e) {
-				define('SHOW_RESULTS', false);
-				$errorMsg = $e->getMessage();
-			}
-		}
-	?>
-	<head>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-		<script type='text/javascript'>
-			function setTargetControls() {
-				if ($("#advType_rank").is(":checked")) {
-					$("#rankSelectors").show();
-					$("#mbSelectors").hide();
-					if ("Eagle Palms" === $("#targetRank").val()) {
-						$("#targetPalmCount").show();
-					} else {
-						$("#targetPalmCount").hide();
-					}
-				} else {
-					$("#rankSelectors").hide();
-					$("#mbSelectors").show();
-				}
-			}
-			
-			function setTargetControlEventHandlers() {
-				$("#advType_rank, #advType_merit_badge, #targetMB, #targetRank, #targetPalmCount").click(setTargetControls);
-			}
-			
-			$(document).ready(function() {
-				setTargetControls();
-				setTargetControlEventHandlers();
-			
-			});
-		</script>
-	</head>
-	<body>
-		<form method='post'>
-			<?php if ($errorMsg) : ?>
-			<div class="error_message_container">
-				<span class="error_message"><?= $errorMsg ?></span>
-			</div>
-			<?php endif; ?>
-			<div>
-				<label for='start_date'>Start Date: </label>
-				<input type='date' name='start_date' min='<?= date('Y-m-d') ?>' value='<?= date('Y-m-d') ?>' />
-			</div>
+        //RECEIVE PLAN PROJECTION
+        1. List steps to be completed
+        2. List date for last possible completion for each step
+        3. List average days per requirement to be completed in order to match
 
-			<div>
-				<label for='start_date'>Target Date: </label>
-				<input type='date' name='target_date' />
-			</div>
+        ----------------------
+        BACK END
+        1. Determine starting rank.
+        2. Determine completion rank.
+        3. Gather list of all required steps between start and completion rank.
+        4. Check off all requirements which have been completed.
+        5. Determine all concurrent progression steps
+        6. Divide remaining requirements amongst total time
+         */
+        global $form_values; 
+        $form_values = array();
+        
+        $show_results = false;
+        if ("POST" === $_SERVER['REQUEST_METHOD']) {
+            try {
+                if ($_POST['advType'] === 'rank' && !isset($_POST['targetRank']) || empty($_POST['targetRank'])) {
+                    throw new Exception('Target Rank not specified');
+                }
 
-			<div>
-				<span>Target Advancement Type:</span><br />
-				<input type='radio' name='advType' id='advType_rank' checked='true'>
-				<label for='advType_rank'>Rank</label>
-				<input type='radio' name='advType' id='advType_merit_badge'>
-				<label for='advType_merit_badge'>Merit Badge</label>
-			</div>
+                if (!isset($_POST['target_date']) || empty($_POST['target_date'])) {
+                    throw new Exception('Target Date not specified');//get the b-day and go to the 18th b-day as default?
+                }
 
-			<div>
-				<div id="mbSelectors" style="display:none">
-					<select name='targetMB' id='targetMB'>
-						<option value=''>Select Target Merit Badge</option>
-						<?php foreach ($allMBs as $mb) : ?>
-						<option value='<?= $mb['Name'] ?>'><?= $mb['Name'] ?></option>
-						<?php endforeach; ?>
-					</select>
-				</div>
-				<div id="rankSelectors">
-					<select name='targetRank' id='targetRank'>
-						<option value=''>Select Target Rank</option>
-						<?php foreach ($allRanks as $rank) : ?>
-						<option value='<?= $rank->progressOrder ?>'><?= $rank->name ?></option>
-						<?php endforeach; ?>
-					</select>
-					<select name='targetPalmCount' id='targetPalmCount' style="display:none;">
-						<option value=''>Select Palm Count</option>
-						<?php for ($p=0; $p<$palmLimit; $p++) : ?>
-						<option><?= $p ?></option>
-						<?php endfor; ?>
-					</select>
-				</div>
-			</div>
+                $startingRank = 0;
+                $targetRank = $_POST['targetRank'];
 
-			<div>
-				<input type='submit'>
-			</div>
-		</form>
-	</body>
+                $ranksToBeCompleted = rank::getRanksToBeCompleted($startingRank, $targetRank);
+
+                $show_results = true;//this should be the last thing that happens
+            } catch (Exception $e) {
+                $errorMsg = $e->getMessage();
+            }
+
+            //restore submitted values
+            $form_values = $_POST;
+        } else {
+            //setup non-blank defaults
+            fv_set('start_date', date('Y-m-d'));
+            fv_set('advType', 'rank');
+        }
+    ?>
+    <head>
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+            <script type='text/javascript'>
+                    function setTargetControls() {
+                            if ($("#advType_rank").is(":checked")) {
+                                    $("#rankSelectors").show();
+                                    $("#mbSelectors").hide();
+                                    if ("Eagle Palms" === $("#targetRank").val()) {
+                                            $("#targetPalmCount").show();
+                                    } else {
+                                            $("#targetPalmCount").hide();
+                                    }
+                            } else {
+                                    $("#rankSelectors").hide();
+                                    $("#mbSelectors").show();
+                            }
+                    }
+
+                    function setTargetControlEventHandlers() {
+                            $("#advType_rank, #advType_merit_badge, #targetMB, #targetRank, #targetPalmCount").click(setTargetControls);
+                    }
+
+                    $(document).ready(function() {
+                            setTargetControls();
+                            setTargetControlEventHandlers();
+
+                    });
+            </script>
+    </head>
+    <body>
+        <form method='post'>
+            <?php if ($errorMsg) : ?>
+            <div class="error_message_container">
+                <span class="error_message"><?= $errorMsg ?></span>
+            </div>
+            <?php endif; ?>
+            <div>
+                <label for='start_date'>Start Date: </label>
+                <input type='date' name='start_date' min='<?= date('Y-m-d') ?>' value='<?= fv('start_date') ?>' />
+            </div>
+
+            <div>
+                <label for='start_date'>Target Date: </label>
+                <input type='date' name='target_date' value='<?= fv('target_date') ?>'/>
+            </div>
+
+            <div>
+                <span>Target Advancement Type:</span><br />
+                <input type='radio' name='advType' id='advType_rank' value='rank' <?php if (fv('advType') === 'rank') : ?>checked='true'<?php endif; ?>>
+                <label for='advType_rank'>Rank</label>
+                <input type='radio' name='advType' id='advType_merit_badge' value='merit_badge' <?php if (fv('advType') === 'merit_badge') : ?>checked='true'<?php endif; ?>>
+                <label for='advType_merit_badge'>Merit Badge</label>
+            </div>
+
+            <div>
+                <div id="mbSelectors" style="display:none">
+                    <select name='targetMB' id='targetMB'>
+                        <option value=''>Select Target Merit Badge</option>
+                        <?php foreach ($allMBs as $mb) : ?>
+                        <option value='<?= $mb['Name'] ?>' <?php if (fv('targetMB') === $mb['Name']):?>selected='true'<?php endif; ?>><?= $mb['Name'] ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div id="rankSelectors">
+                    <select name='targetRank' id='targetRank'>
+                        <option value=''>Select Target Rank</option>
+                        <?php foreach ($allRanks as $rank) : ?>
+                        <option value='<?= $rank->progressOrder ?>' <?php if (fv('targetRank') === $rank->progressOrder):?>selected='true'<?php endif; ?>><?= $rank->name ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <select name='targetPalmCount' id='targetPalmCount' style="display:none;">
+                        <option value=''>Select Palm Count</option>
+                        <?php for ($p=0; $p<$palmLimit; $p++) : ?>
+                        <option <?php if (fv('targetPalmCount') === $p):?>selected='true'<?php endif; ?>><?= $p ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                    <input type='submit'>
+            </div>
+        </form>
+
+        <?php if ($show_results): ?>
+        <div id="plannedPath">
+            <?php foreach ($ranksToBeCompleted as $rank) : ?>
+            <div class="path_rank">
+                <span class="rank"><?= $rank->name ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </body>
 </html>
+<?php
+    function fv_set($index, $value) {
+        global $form_values;
+        $form_values[$index] = $value;
+    }
+    
+    function fv($index) {
+        global $form_values;
+        
+        if (isset($form_values[$index])) {
+            return $form_values[$index];
+        } else {
+            return '';
+        }
+    }
+?>

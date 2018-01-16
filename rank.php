@@ -16,11 +16,13 @@ class rank {
 	public $slug;
 	public $name;
 	public $progressOrder;
+        public $requiredDays;
 	
-	function __construct($slug, $name, $progressOrder) {
+	function __construct($slug, $name, $progressOrder, $requiredDays) {
 		$this->slug = $slug;
 		$this->name = $name;
 		$this->progressOrder = $progressOrder;
+                $this->requiredDays = $requiredDays;
 	}
 	
 	public static function getRanks() {
@@ -29,12 +31,26 @@ class rank {
 		$result = db::execute_reader("SELECT * FROM Ranks Order By ProgressionOrder ASC");
 		if (FALSE === $result->error) {
 			foreach ($result->rows as $row) {
-				$ranks[] = new rank($row['Name'], $row['Name'], $row['ProgressionOrder']);
+				$ranks[] = new rank($row['Name'], $row['Name'], $row['ProgressionOrder'], $row['RequiredDays']);
 			}
 		}
 
 		return $ranks;
 	}
+        
+        public static function getRanksToBeCompleted($startingRank, $targetRank) {
+            $ranks = array();
+		
+            $result = db::execute_reader("SELECT * FROM Ranks WHERE ProgressionOrder > {$startingRank} AND
+		ProgressionOrder <= {$targetRank} ORDER BY ProgressionOrder ASC");
+            if (FALSE === $result->error) {
+                    foreach ($result->rows as $row) {
+                            $ranks[] = new rank($row['Name'], $row['Name'], $row['ProgressionOrder'], $row['RequiredDays']);
+                    }
+            }
+
+            return $ranks;
+        }
 	
 	public static function getRankDays($startingRank, $targetRank) {
 		$query = 

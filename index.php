@@ -220,6 +220,17 @@
                 }
             ?>
         <div id="plannedPath">
+            <?php 
+                if ("Eagle Palms" == $ranksToBeCompleted[count($ranksToBeCompleted)-1]->name) {//if eagle palms is the last rank to be completed - add in addition rank entries for additional eagle palms
+                    $eaglePalmTemplate = array_pop($ranksToBeCompleted);
+                    for ($ep = 1; $ep <= fv('targetPalmCount'); $ep++) {
+                        $eaglePalmInstance = clone($eaglePalmTemplate);
+                        $eaglePalmInstance->name = "Eagle Palm {$ep}";
+                        $eaglePalmInstance->slug = "eagle_palm_{$ep}";
+                        $ranksToBeCompleted[] = $eaglePalmInstance;
+                    }
+                }
+            ?>
             <?php foreach ($ranksToBeCompleted as $rank) : ?>
             <div class="path_rank">
                 <span class="rank"><?= $rank->name ?></span> - <span class="targetDate">Complete By: <?= date('m/d/Y', strtotime($rank->targetDate)) ?><br>
@@ -244,7 +255,12 @@
                                     endif; 
                                 endforeach; 
                             ?>
-                        </select><br>
+                        </select>
+                        <?php if (strstr($rank->name, "Eagle Palm")): ?>
+                        <input type="checkbox" name="<?= $rank->slug ?>_electiveMb_<?= $m ?>_completedPrior" <?php if (fv($rank->slug."_electiveMb_".$m."_completedPrior") === "on"):?>checked='true'<?php endif;?>>
+                        <label fo="<?= $rank->slug ?>_electiveMb_<?= $m ?>_completedPrior">Completed prior to Eagle</label>
+                        <?php endif; ?>
+                        <br>
                         <span class="mbTime"></span>
                     </div>
                     <?php endfor; ?><br />
@@ -264,7 +280,8 @@
                                     endif;
                                 endforeach; 
                             ?>
-                        </select><br />
+                        </select>
+                        <br />
                         <span class="mbTime"></span>
                     </div>
                     <?php endfor; ?>
@@ -274,7 +291,6 @@
             <?php endforeach; ?>
             <input type="submit" value="Update" />
         </div>
-            <?php utilities::dump($form_values); ?>
         <?php endif; ?>
         </form>
     </body>

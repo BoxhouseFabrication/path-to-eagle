@@ -18,12 +18,16 @@ class rank {
 	public $progressOrder;
         public $requiredDays;
         public $targetDate;
+        public $electiveMbCnt;
+        public $eagleMbCnt;
 	
-	function __construct($slug, $name, $progressOrder, $requiredDays) {
-            $this->slug = $slug;
-            $this->name = $name;
+	function __construct($slug, $name = null, $progressOrder = 100, $requiredDays = 0, $electiveMbCnt = 0, $eagleMbCnt = 0) {
+            $this->slug = utilities::sanitizeString($slug);
+            $this->name = is_null($name) ? $slug : $name;
             $this->progressOrder = $progressOrder;
             $this->requiredDays = $requiredDays;
+            $this->electiveMbCnt = $electiveMbCnt;
+            $this->eagleMbCnt = $eagleMbCnt;
 	}
 	
 	public static function getRanks() {
@@ -46,7 +50,7 @@ class rank {
 		ProgressionOrder <= {$targetRank} ORDER BY ProgressionOrder ASC");
             if (FALSE === $result->error) {
                     foreach ($result->rows as $row) {
-                            $ranks[] = new rank($row['Name'], $row['Name'], $row['ProgressionOrder'], $row['RequiredDays']);
+                            $ranks[] = new rank($row['Name'], $row['Name'], $row['ProgressionOrder'], $row['RequiredDays'], $row['RequiredElectiveMeritBadges'], $row['RequiredEagleMeritBadges']);
                     }
             }
 

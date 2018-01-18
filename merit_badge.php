@@ -16,7 +16,7 @@ class merit_badge {
 	//put your code here
 	
 	public $name;
-	public $difficultyRating; // http://bsaprepared.com/BSA_PREPARED/MB_Difficulty.html
+	public $difficultyRating; // http://usscouts.org/advance/docs/Mr_DsReview.pdf (terminated: http://bsaprepared.com/BSA_PREPARED/MB_Difficulty.html)
 	public $eagleRequired; //this is required for Eagle badge
 	public $requiredDays; // https://meritbadge.org/
 	public $requiredRank; 
@@ -36,7 +36,7 @@ class merit_badge {
 	public static function getMeritBadges() {
 		$MBs = array();
 		
-		$result = db::execute_reader("SELECT * FROM Merit_Badge");
+		$result = db::execute_reader("SELECT * FROM Merit_Badge ORDER BY Name");
 		if (FALSE === $result->error) {
 			foreach ($result->rows as $row) {
 				$MBs[] = $row;
@@ -49,7 +49,7 @@ class merit_badge {
 	public static function getEagleMeritBadges() {
 		$MBs = array();
 		
-		$result = db::execute_reader("SELECT * FROM Merit_Badge WHERE EagleRequired = '1'");
+		$result = db::execute_reader("SELECT * FROM Merit_Badge WHERE EagleRequired = '1' ORDER BY Name");
 		if (FALSE === $result->error) {
 			foreach ($result->rows as $row) {
 				$MBs[] = $row;

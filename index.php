@@ -71,7 +71,7 @@
                             if ($("#advType_rank").is(":checked")) {
                                     $("#rankSelectors").show();
                                     $("#mbSelectors").hide();
-                                    if ("Eagle Palms" === $("#targetRank").val()) {
+                                    if ("8" === $("#targetRank").val()) {
                                             $("#targetPalmCount").show();
                                     } else {
                                             $("#targetPalmCount").hide();
@@ -79,19 +79,48 @@
                             } else {
                                     $("#rankSelectors").hide();
                                     $("#mbSelectors").show();
+                                    $("#targetPalmCount").hide();
                             }
                     }
+                    
+                    function validatePlannedMbs() {
+                        var selectedMbs = [];
+                        $(".planned_mb").each(function(index, element) {
+                           if ("" != $(this).val()) {
+                                if (selectedMbs.indexOf($(this).val())== -1) {
+                                    $(element).removeClass("mbSelectionConflict");
+                                } else {
+                                    $(element).addClass("mbSelectionConflict");
+                                }
+                                selectedMbs.push($(element).val());
+                            }
+                        });
+                    }
+                    
+                    function plannedMBChanged(e) {
+                        
+                        if ("undefined" != typeof($("option:selected", this).data("days"))) {
+                            $(this).siblings(".mbTime").html($("option:selected", this).data("days") + " days");
+                        }
+                        validatePlannedMbs();
+                    }
 
-                    function setTargetControlEventHandlers() {
-                            $("#advType_rank, #advType_merit_badge, #targetMB, #targetRank, #targetPalmCount").click(setTargetControls);
+                    function setEventHandlers() {
+                        $("#advType_rank, #advType_merit_badge, #targetMB, #targetRank").click(setTargetControls);
+                        $(".planned_mb").change(plannedMBChanged);
                     }
 
                     $(document).ready(function() {
-                            setTargetControls();
-                            setTargetControlEventHandlers();
-
+                        setTargetControls();
+                        setEventHandlers();
+                        $(".planned_mb").each(plannedMBChanged);
                     });
             </script>
+            <style>
+                .path_rank {margin: 10px;}
+                .mbSelectionConflict {background-color: red;}
+            </style>
+                
     </head>
     <body>
         <form method='post'>
@@ -137,7 +166,7 @@
                     <select name='targetPalmCount' id='targetPalmCount' style="display:none;">
                         <option value=''>Select Palm Count</option>
                         <?php for ($p=0; $p<$palmLimit; $p++) : ?>
-                        <option <?php if (fv('targetPalmCount') === $p):?>selected='true'<?php endif; ?>><?= $p ?></option>
+                        <option <?php if (fv('targetPalmCount') == $p):?>selected='true'<?php endif; ?>><?= $p ?></option>
                         <?php endfor; ?>
                     </select>
                 </div>
@@ -146,7 +175,6 @@
             <div>
                     <input type='submit'>
             </div>
-        </form>
 
         <?php if ($show_results): ?>
             <?php 
@@ -195,14 +223,60 @@
             <?php foreach ($ranksToBeCompleted as $rank) : ?>
             <div class="path_rank">
                 <span class="rank"><?= $rank->name ?></span> - <span class="targetDate">Complete By: <?= date('m/d/Y', strtotime($rank->targetDate)) ?><br>
-                    <?= $rank->requiredDays ?> / <?= $totalDaysRequired ?> = <?= $rank->requiredDays/$totalDaysRequired ?>
-                    <?php if (isset($totalDaysAvailable)) : ?><br>
-                        <?= $totalDaysAvailable * ($rank->requiredDays/$totalDaysRequired) ?>
+                <?php /* $rank->requiredDays ?> / <?= $totalDaysRequired ?> = <?= $rank->requiredDays/$totalDaysRequired */?>
+                <?php if (isset($totalDaysAvailable)) : ?>
+                    <?php $weightedDays = $totalDaysAvailable * ($rank->requiredDays/$totalDaysRequired); ?>
+                    <?= utilities::daysToDuration($weightedDays) ?>
+                <?php endif; ?>
+                <div class="merit_badges">
+                    <?php if (0 < $rank->electiveMbCnt) : ?>
+                    <span class="elective_merit_badges">Elective Merit Badges</span><br>
+                    <?php for($m=0; $m<$rank->electiveMbCnt; $m++) : ?>
+                    <div class="mbSelection">
+                        <select name='<?= $rank->slug ?>_electiveMb_<?= $m ?>' id='<?= $rank->slug ?>_electiveMb_<?= $m ?>' class="planned_mb">
+                            <option value=''>Select Merit Badge</option>
+                            <?php 
+                                foreach ($allMBs as $mb) : 
+                                    if (!$mb['EagleRequired']) :
+                            ?>
+                            <option value='<?= $mb['Name'] ?>' <?php if (fv($rank->slug."_electiveMb_".$m) === $mb['Name']):?>selected='true'<?php endif; ?> data-days="<?= $mb['RequiredDays'] ?>"><?= $mb['Name'] ?></option>
+                            <?php 
+                                    endif; 
+                                endforeach; 
+                            ?>
+                        </select><br>
+                        <span class="mbTime"></span>
+                    </div>
+                    <?php endfor; ?><br />
                     <?php endif; ?>
+                    <?php if (0 < $rank->eagleMbCnt) : ?>
+                    <span class="eagle_merit_badges">Eagle Merit Badges</span><br>
+                    <?php for($m=0; $m<$rank->eagleMbCnt; $m++) : ?>
+                    <div class="mbSelection">
+                        <select name='<?= $rank->slug ?>_eagleMb_<?= $m ?>' id='<?= $rank->slug ?>_eagleMb_<?= $m ?>' class="planned_mb">
+                            <option value=''>Select Merit Badge</option>
+                            <?php 
+                                foreach ($allMBs as $mb) :
+                                    if ($mb['EagleRequired']) :
+                            ?>
+                            <option value='<?= $mb['Name'] ?>' <?php if (fv($rank->slug."_eagleMb_".$m) === $mb['Name']):?>selected='true'<?php endif; ?> data-days="<?= $mb['RequiredDays'] ?>"><?= $mb['Name'] ?></option>
+                            <?php 
+                                    endif;
+                                endforeach; 
+                            ?>
+                        </select><br />
+                        <span class="mbTime"></span>
+                    </div>
+                    <?php endfor; ?>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php endforeach; ?>
+            <input type="submit" value="Update" />
         </div>
+            <?php utilities::dump($form_values); ?>
         <?php endif; ?>
+        </form>
     </body>
 </html>
 <?php

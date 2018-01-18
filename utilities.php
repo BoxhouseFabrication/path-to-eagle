@@ -19,4 +19,35 @@ class utilities {
 		var_dump($obj);
 		echo "</pre>";
 	}
+        
+        public static function daysToDuration($dayCnt) {
+            $duration['year'] = floor($dayCnt/365);
+            $dayCnt = $dayCnt-($duration['year']*365);
+            
+            $duration['month'] = floor($dayCnt/30);
+            $dayCnt = $dayCnt-($duration['month']*30);
+            
+            $duration['week'] = floor($dayCnt/7);
+            $dayCnt = $dayCnt-($duration['week']*7);
+            
+            $duration['day'] = ceil($dayCnt);
+            $dString = "";
+            foreach ($duration as $key=>$value) {
+                if (0 < $value) {
+                    if (!empty($dString)) {
+                        $dString .= ", ";
+                    }
+                    $dString .= "{$value} {$key}";
+                    if (1 < $value) {
+                        $dString .= "s";
+                    }
+                }
+            }
+            return $dString;
+        }
+        
+        public static function sanitizeString($str) {
+            $str = str_replace(' ', '_', $str);
+            return $str;
+        }
 }
